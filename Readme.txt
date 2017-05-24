@@ -6,6 +6,7 @@ Machine Learning
 # SOFTWARE
 #######################
 python version 3
+Numpy Modules for python
 
 #######################
 # RUN COMMANDLINE
