@@ -11,7 +11,7 @@ verbose = 0
 freqOption = True
 punctOption = True
 punctuations = ".,?!&*()%$#@/\\:;\'\"<>-"
-shuffleOption = False
+shuffleOption = True
 
 for i in argv:
     if i == "-d":
@@ -58,7 +58,7 @@ def extract_features_frequency(filedata, wordcount_dict):
         if tok not in wordcount_dict:
             wordcount_dict[tok]=1;
         else:
-            wordcount_dict[tok] = wordcount_dict[tok] + 1
+            wordcount_dict[tok] += 1
 
 
 # EXTRACTS FEATURES FROM A FILE, INTO THE DICTIONARY BASED ON WORD PRESENCE.

@@ -1,7 +1,7 @@
 import copy
 from sys import argv
 import preprocessor as pp
-from knnModel import KnnModel
+from centroidModel import CentroidModel
 import sys
 
 ##############################
@@ -11,20 +11,20 @@ debug = 0
 verbose = 0
 freqOption = True
 punctOption = True
-kValue  = 3 # default K-value
 distance_formula = "e" # default is euclidean formula
 
 
 def usage():
-    print("python3 knn.py [--binary|--frequency] [--punct|--nopunct] [--k=<number>] [--metric=euclidean|manhattan]")
+    print("python3 centroid.py [--binary|--frequency] [--punct|--nopunct] [--metric=euclidean|manhattan] -v -d")
 
 
 ###############################
 #   TRAINING/TESTING PROCESS
 ###############################
 
-# trains the knnClassifier on all the training set tuples, pulling feature vectors out of the master_feature dictionaries.
-def train_knn_classifer_allfiles(knnClassifier, train_set, master_features_dict_neg, master_features_dict_pos):
+# trains the centroidClassifier on all the training set tuples, pulling feature vectors out of the master_feature dictionaries.
+def train_centroid_classifer_allfiles(centroidClassifier, train_set, master_features_dict_neg, master_features_dict_pos):
+    centroidClassifier.reset()
     finished = 0
     for train_tuple in train_set:
         # extract tuple elements
@@ -36,14 +36,16 @@ def train_knn_classifer_allfiles(knnClassifier, train_set, master_features_dict_
         elif(expected_result == 1):
             training_feature_vector = master_features_dict_pos[training_file]
         # train on the feature vector and continue.
-        knnClassifier.train(training_feature_vector, expected_result)
+        centroidClassifier.train(training_feature_vector, expected_result)
         finished = finished + 1
-        if verbose: print("knnClassifier finished training on \t" + training_file + "\tremaining files:" + str(len(train_set)- finished))
+        if verbose: print("centroidClassifier finished training on \t" + training_file + "\tremaining files:" + str(len(train_set)- finished))
+    # ready centroidClassifier after training
+    centroidClassifier.readyTest()
 
 
 
-# tests the knnClassifier on all the training set tuples, pulling feature vectors out of the master_feature dictionaries.
-def test_knn_classifier_allfiles(knnClassifier, test_set, master_features_dict_neg,  master_features_dict_pos):
+# tests the centroidClassifier on all the training set tuples, pulling feature vectors out of the master_feature dictionaries.
+def test_centroid_classifier_allfiles(centroidClassifier, test_set, master_features_dict_neg,  master_features_dict_pos):
     # Test Report variables
     false_neg_count = 0
     false_pos_count = 0
@@ -60,8 +62,9 @@ def test_knn_classifier_allfiles(knnClassifier, test_set, master_features_dict_n
             test_feature_vector = master_features_dict_neg[test_file]
         else:
             test_feature_vector = master_features_dict_pos[test_file]
-        # TEST OUR KNN'S VIEW OF THIS TEST FEATURE SET.
-        result = knnClassifier.classify(test_feature_vector)
+        # TEST OUR centroid'S VIEW OF THIS TEST FEATURE SET.
+        result = centroidClassifier.classify(test_feature_vector)
+
         # ADD TO THE COUNTS FOR THIS RUN.
         #True Positives
         if((expected_result == 1) and (result == 1)): true_pos_count += 1
@@ -75,7 +78,7 @@ def test_knn_classifier_allfiles(knnClassifier, test_set, master_features_dict_n
         tested = tested + 1
         output = "CORRECT" if(result==expected_result) else "WRONG"
         prediction = "POS" if result>0 else "NEG"
-        if verbose: print("knn tested on \t" + test_file + "\tremaining files:" + str(len(test_set)- tested) + "\tRESULT:"+ output + " PREDICT:" + str(prediction))
+        if verbose: print("centroid tested on \t" + test_file + "\tremaining files:" + str(len(test_set)- tested) + "\tRESULT:"+ output + " PREDICT:" + str(prediction))
     return test_statistics_dict(true_pos_count, true_neg_count, false_pos_count, false_neg_count)
 
 
@@ -238,7 +241,6 @@ def print_individual_performance(performance):
 
 
 
-
 def print_accuracy_variables(accuracy_report):
     for stat_dict in accuracy_report:
         if verbose: print("TEST NUMBER: " + str(stat_dict['test']))
@@ -265,7 +267,7 @@ def print_avg_performance(avg_performance):
 ###########################
 #    SCRIPT
 ###########################
-if(len(argv) < 5):
+if(len(argv) < 4):
     usage()
     exit()
 
@@ -288,43 +290,28 @@ try:
     if punctField == "--punct":
         punctOption = True
         print("Punct Option : True")
-    elif punctField == "--nopunct":
+    elif i == "--nopunct":
         punctOption = False
         print("Punct Option : False")
-    else:
-        print("PunctOption default to true")
 except:
-    print("PunctOption default to true")
     pass
 
-# INIT KVALUE OPTION
-try:
-    kValueField = argv[3].strip().lower()
-    if kValueField.startswith("--k="):
-        kValue = int(kValueField.strip("--k="))
-        print("K value:"+ str(kValue))
-    else:
-        print("K value: default = 3")
-except:
-    pass
 
 # INIT DISTANCE FORMULA OPTION
 try:
-    distanceField = argv[4].strip().lower()
+    distanceField = argv[3].strip().lower()
     if distanceField == "--metric=euclidean":
         distance_formula = "e"
         print("Distance Option: Euclidean")
-    elif distanceField == "--metric=manhattan":
+    elif distanceField == "--metric==manhattan":
         distance_formula = "m"
         print("Distance Option: Manhattan")
-    else:
-        print("using default Distance Option : euclidean")
 except:
     pass
 
 # INITIALIZE VERBOSE FIELD
 try:
-    verboseField = argv[5]
+    verboseField = argv[4]
     if verboseField == "-v":
         verbose = 1
         print("VERBOSE ON")
@@ -333,7 +320,7 @@ except:
 
 # INITIALIZE DEBUG FIELD
 try:
-    debugField = argv[6].strip().lower()
+    debugField = argv[5].strip().lower()
     if debugField == "-d":
         debug = 1
         print("DEBUG ON")
@@ -358,8 +345,9 @@ if(debug and verbose):
 #       MAIN LOOP
 ####################
 accuracy_report = []
-knnClassifier = KnnModel(kValue,distance_formula)
+centroidClassifier = CentroidModel(distance_formula)
 
+print("centroid is training")
 # TEST WITH FIVE-FOLD CROSS-VALIDATION
 for foldIteration in range(5):
     fifth_partition = len(combined_data)//5
@@ -373,13 +361,11 @@ for foldIteration in range(5):
     train_set = combined_data[:start_partition] + combined_data[end_partition:]
     # give the list of training file tuples to be trained
     # and the master features dict, to get file vectors for the training file.
-    knnClassifier.reset()
-    train_knn_classifer_allfiles(knnClassifier, train_set, pp.master_features_dict_neg, pp.master_features_dict_pos)
-    knnClassifier.readyTest()
+    train_centroid_classifer_allfiles(centroidClassifier, train_set, pp.master_features_dict_neg, pp.master_features_dict_pos)
     # give the list of test file tuples to be tested
     # and the master features dict, to get file vectors for the test file.
-    print("knn is now testing, may take a while...")
-    test_summary = test_knn_classifier_allfiles(knnClassifier, test_set, pp.master_features_dict_neg, pp.master_features_dict_pos)
+    print("centroid is now testing, may take a while...")
+    test_summary = test_centroid_classifier_allfiles(centroidClassifier, test_set, pp.master_features_dict_neg, pp.master_features_dict_pos)
     test_summary.update({"test" : foldIteration + 1 })
     # store the statistics report.
     accuracy_report.append(test_summary)
